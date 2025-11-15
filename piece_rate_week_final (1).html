@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Piece Rate — Weekly (one-day view)</title>
+  <style>
+    :root{--bg:#f3f6fb;--card:#fff;--accent:#2563eb;--muted:#6b7280}
+    body{background:var(--bg);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;padding:18px}
+    .wrap{max-width:980px;margin:0 auto}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 8px 30px rgba(8,20,48,0.06);margin-bottom:14px}
+    h1{margin:0;font-size:20px}
+    .muted{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:10px;align-items:center}
+    label{font-size:13px;color:var(--muted);display:block}
+    input[type=number],input[type=text],select{padding:8px;border-radius:8px;border:1px solid #e6eef8;font-size:14px}
+    button{background:var(--accent);color:#fff;border:none;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(37,99,235,0.12)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eef2f8;text-align:left}
+    th{font-size:13px;color:var(--muted)}
+    .right{text-align:right}
+    .week-grid{display:flex;gap:8px;flex-wrap:wrap}
+    .day-pill{background:#f8fbff;border:1px solid #e6f0ff;padding:8px 10px;border-radius:10px;min-width:80px;text-align:center}
+    .day-pill.active{background:linear-gradient(180deg,#2563eb,#1e40af);color:white}
+    .small{font-size:13px;color:var(--muted)}
+    .big{font-size:18px;font-weight:700}
+    .controls{display:flex;gap:10px;align-items:end}
+    @media (max-width:640px){ .row{flex-direction:column;align-items:stretch} .controls{flex-direction:column} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h1>Piece Rate — Weekly (one-day view)</h1>
+          <div class="muted">Choose trays for today, Save day → moves to next day. Prices and week saved on this device.</div>
+        </div>
+        <div class="muted">Team size: <input id="teamSize" type="number" value="5" min="1" style="width:70px;margin-left:8px;padding:6px;border-radius:6px;border:1px solid #e6eef8" /></div>
+      </div>
+
+      <hr style="margin:12px 0" />
+
+      <div class="row" style="margin-bottom:8px">
+        <div style="flex:1">
+          <label>Heads</label>
+          <select id="headsSelect"></select>
+        </div>
+        <div style="flex:1">
+          <label>Type</label>
+          <select id="typeSelect"></select>
+        </div>
+        <div style="flex:1">
+          <label>Price per tray</label>
+          <input id="priceInput" type="number" step="0.01" />
+        </div>
+        <div style="width:110px">
+          <label>Trays</label>
+          <input id="traysInput" type="number" min="0" value="0" />
+        </div>
+        <div style="width:120px">
+          <label style="visibility:hidden">Add</label>
+          <button id="addEntryBtn">Add entry</button>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:space-between;margin-top:8px">
+        <div class="small">Quick: <button id="addPresetBtn" class="ghost">Add preset row</button></div>
+        <div class="small"> <button id="addCustomTypeBtn" class="ghost">Add custom tray type</button></div>
+      </div>
+
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div><strong id="dayLabel">Day 1 (Mon)</strong></div>
+        <div class="small">Entries for today — editable</div>
+      </div>
+
+      <table id="entriesTable">
+        <thead>
+          <tr><th>Heads</th><th>Type</th><th>Price</th><th>Trays</th><th class="right">Daily £</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <div>
+          <button id="saveDayBtn">Save day → next</button>
+          <button id="clearDayBtn" class="ghost">Clear day</button>
+        </div>
+        <div style="text-align:right">
+          <div class="small">Daily total</div>
+          <div class="big" id="dailyTotal">£0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div><strong>Weekly summary</strong></div>
+        <div class="small">Tap a day to view/edit</div>
+      </div>
+
+      <div class="week-grid" id="weekGrid"></div>
+
+      <div style="margin-top:12px;display:flex;justify-content:space-between;gap:10px;align-items:center">
+        <div>
+          <div class="small">Weekly total</div>
+          <div class="big" id="weeklyTotal">£0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div class="small">Per person (team)</div>
+          <div class="big" id="perPersonWeekly">£0.00</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Data model in localStorage
+    const KEY = 'piece_rate_week_final_v1';
+
+    const DEFAULT_HEADS = [6,7,8,11];
+    const DEFAULT_TYPES = ['naked','bagged','1st class','2nd class'];
+
+    // default price map for combinations (heads|type) -> price per tray
+    const defaultPriceMap = {
+      '8|bagged': 6.00,
+      '8|naked': 5.00,
+      '6|naked': 4.50,
+      '11|naked': 7.00,
+      '8|1st class': 6.80,
+      '6|1st class': 5.90,
+      '7|1st class': 6.30,
+      '8|2nd class': 4.50,
+      '6|2nd class': 3.80
+    };
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(KEY);
+        if(!raw) return null;
+        return JSON.parse(raw);
+      }catch(e){return null}
+    }
+
+    function saveState(state){
+      try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+    }
+
+    // initialize state
+    let state = loadState();
+    if(!state){
+      state = {
+        priceMap: defaultPriceMap,
+        customTypes: [],
+        customHeads: [],
+        week: { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: [] },
+        activeDayIndex: 0,
+        teamSize: 5
+      };
+      saveState(state);
+    }
+
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    // DOM refs
+    const headsSelect = document.getElementById('headsSelect');
+    const typeSelect = document.getElementById('typeSelect');
+    const priceInput = document.getElementById('priceInput');
+    const traysInput = document.getElementById('traysInput');
+    const addEntryBtn = document.getElementById('addEntryBtn');
+    const entriesTableBody = document.querySelector('#entriesTable tbody');
+    const dailyTotalEl = document.getElementById('dailyTotal');
+    const weekGrid = document.getElementById('weekGrid');
+    const weeklyTotalEl = document.getElementById('weeklyTotal');
+    const perPersonWeeklyEl = document.getElementById('perPersonWeekly');
+    const dayLabel = document.getElementById('dayLabel');
+    const saveDayBtn = document.getElementById('saveDayBtn');
+    const clearDayBtn = document.getElementById('clearDayBtn');
+    const addCustomTypeBtn = document.getElementById('addCustomTypeBtn');
+    const addPresetBtn = document.getElementById('addPresetBtn');
+    const teamSizeInput = document.getElementById('teamSize');
+
+    // build selects
+    function rebuildSelects(){
+      // heads
+      headsSelect.innerHTML = '';
+      const headsSet = new Set(DEFAULT_HEADS.concat(state.customHeads || []));
+      Array.from(headsSet).sort((a,b)=>a-b).forEach(h => {
+        const opt = document.createElement('option'); opt.value = h; opt.text = h; headsSelect.appendChild(opt);
+      });
+      // types
+      typeSelect.innerHTML = '';
+      const types = DEFAULT_TYPES.concat(state.customTypes || []);
+      types.forEach(t=>{ const opt=document.createElement('option'); opt.value=t; opt.text=t; typeSelect.appendChild(opt); });
+      updatePriceInput();
+    }
+
+    function comboKey(heads,type){ return heads + '|' + type; }
+
+    function updatePriceInput(){
+      const key = comboKey(headsSelect.value, typeSelect.value);
+      const p = state.priceMap && state.priceMap[key];
+      priceInput.value = (p !== undefined) ? p : '';
+    }
+
+    headsSelect.addEventListener('change', updatePriceInput);
+    typeSelect.addEventListener('change', updatePriceInput);
+
+    priceInput.addEventListener('change', ()=>{
+      const key = comboKey(headsSelect.value, typeSelect.value);
+      const v = parseFloat(priceInput.value) || 0;
+      state.priceMap[key] = v;
+      saveState(state);
+      renderEntries();
+      renderWeekGrid();
+    });
+
+    // add custom type
+    addCustomTypeBtn.addEventListener('click', ()=>{
+      const name = prompt('Enter custom type name (e.g. premium, bagged-small):');
+      if(!name) return;
+      if(!state.customTypes) state.customTypes = [];
+      if(!state.customTypes.includes(name)) state.customTypes.push(name);
+      saveState(state); rebuildSelects();
+    });
+
+    // add preset row (quick add) - will add an entry directly to current day
+    addPresetBtn.addEventListener('click', ()=>{
+      const pick = prompt('Quick add preset (type: heads-type). Example: 8-bagged');
+      if(!pick) return;
+      const parts = pick.split('-');
+      if(parts.length<2) return alert('Format heads-type');
+      const heads = parts[0]; const type = parts.slice(1).join('-');
+      const key = comboKey(heads,type);
+      const price = state.priceMap[key];
+      const trays = parseInt(prompt('Trays count', '0'))||0;
+      addEntry({ heads: parseInt(heads), type, pricePerTray: price||0, trays });
+    });
+
+    // entries management for active day
+    function getActiveDay(){ return state.activeDayIndex || 0; }
+    function getActiveDayName(){ return days[state.activeDayIndex || 0]; }
+
+    function renderEntries(){
+      const day = getActiveDayName();
+      const list = state.week[day] || [];
+      entriesTableBody.innerHTML = '';
+      list.forEach((e, i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${e.heads}</td><td>${e.type}</td><td>£<input type="number" value="${e.pricePerTray}" step="0.01" style="width:80px" data-index="${i}" class="price-edit" /></td><td><input type="number" value="${e.trays}" min="0" style="width:70px" data-index="${i}" class="trays-edit" /></td><td class="right">£${(e.pricePerTray*e.trays).toFixed(2)}</td><td><button data-del="${i}">Del</button></td>`;
+        entriesTableBody.appendChild(tr);
+      });
+
+      // attach listeners
+      Array.from(entriesTableBody.querySelectorAll('.trays-edit')).forEach(inp=>{
+        inp.addEventListener('change', (ev)=>{
+          const idx = +ev.target.getAttribute('data-index');
+          state.week[day][idx].trays = +ev.target.value || 0; saveState(state); renderEntries(); renderWeekGrid(); renderTotals();
+        });
+      });
+      Array.from(entriesTableBody.querySelectorAll('.price-edit')).forEach(inp=>{
+        inp.addEventListener('change', (ev)=>{
+          const idx = +ev.target.getAttribute('data-index');
+          state.week[day][idx].pricePerTray = +ev.target.value || 0; saveState(state); renderEntries(); renderWeekGrid(); renderTotals();
+        });
+      });
+      Array.from(entriesTableBody.querySelectorAll('button[data-del]')).forEach(btn=>{
+        btn.addEventListener('click', (ev)=>{
+          const idx = +ev.target.getAttribute('data-del');
+          state.week[day].splice(idx,1); saveState(state); renderEntries(); renderWeekGrid(); renderTotals();
+        });
+      });
+
+      renderTotals();
+    }
+
+    function renderTotals(){
+      const day = getActiveDayName();
+      const list = state.week[day] || [];
+      const daily = list.reduce((s,x)=>s + (x.pricePerTray * x.trays),0);
+      dailyTotalEl.textContent = '£' + daily.toFixed(2);
+
+      const weekly = Object.values(state.week).flat().reduce((s,x)=>s + (x.pricePerTray * x.trays),0);
+      weeklyTotalEl.textContent = '£' + weekly.toFixed(2);
+      const team = parseInt(teamSizeInput.value) || state.teamSize || 5;
+      perPersonWeeklyEl.textContent = '£' + (weekly / team).toFixed(2);
+    }
+
+    function addEntry(entry){
+      const day = getActiveDayName();
+      if(!state.week[day]) state.week[day] = [];
+      state.week[day].push(entry);
+      saveState(state); renderEntries(); renderWeekGrid();
+    }
+
+    addEntryBtn.addEventListener('click', ()=>{
+      const heads = parseInt(headsSelect.value) || 0;
+      const type = typeSelect.value;
+      const price = parseFloat(priceInput.value) || 0;
+      const trays = parseInt(traysInput.value) || 0;
+      if(!heads || !type) return alert('Choose heads and type');
+      addEntry({ heads, type, pricePerTray: price, trays });
+      traysInput.value = 0;
+    });
+
+    // save day -> move to next day index
+    saveDayBtn.addEventListener('click', ()=>{
+      const idx = state.activeDayIndex || 0;
+      const next = (idx + 1) % 7;
+      state.activeDayIndex = next; saveState(state); renderActiveDay();
+      alert('Saved and moved to next day');
+    });
+
+    clearDayBtn.addEventListener('click', ()=>{
+      if(!confirm('Clear all entries for today?')) return;
+      const day = getActiveDayName(); state.week[day]=[]; saveState(state); renderEntries(); renderWeekGrid(); renderTotals();
+    });
+
+    // week grid render
+    function renderWeekGrid(){
+      weekGrid.innerHTML = '';
+      days.forEach((d,i)=>{
+        const total = (state.week[d]||[]).reduce((s,x)=>s + (x.trays * x.pricePerTray),0);
+        const el = document.createElement('div'); el.className='day-pill' + (i===state.activeDayIndex?' active':'');
+        el.innerHTML = `<div style="font-weight:700">${d}</div><div class="small">£${total.toFixed(2)}</div>`;
+        el.addEventListener('click', ()=>{ state.activeDayIndex = i; saveState(state); renderActiveDay(); });
+        weekGrid.appendChild(el);
+      });
+      renderTotals();
+    }
+
+    // change active day UI
+    function renderActiveDay(){
+      const idx = state.activeDayIndex || 0; const name = days[idx]; dayLabel.textContent = 'Day ' + (idx+1) + ' (' + name + ')';
+      renderEntries(); renderWeekGrid(); updatePriceInput();
+    }
+
+    // add custom heads or types support via prompts
+    function addCustomHead(){ const h = prompt('Enter head number (e.g. 5)'); if(!h) return; if(!state.customHeads) state.customHeads=[]; if(!state.customHeads.includes(+h)) state.customHeads.push(+h); saveState(state); rebuildSelects(); }
+    function addCustomType(){ const t = prompt('Enter type name'); if(!t) return; if(!state.customTypes) state.customTypes=[]; if(!state.customTypes.includes(t)) state.customTypes.push(t); saveState(state); rebuildSelects(); }
+
+    // initial setup
+    function init(){
+      // ensure map exists
+      if(!state.priceMap) state.priceMap = {};
+      // set team size input
+      teamSizeInput.value = state.teamSize || 5;
+      teamSizeInput.addEventListener('change', ()=>{ state.teamSize = parseInt(teamSizeInput.value) || 5; saveState(state); renderTotals(); });
+      // attach custom type button
+      addCustomTypeBtn.addEventListener('click', addCustomType);
+
+      rebuildSelects();
+      renderActiveDay();
+    }
+
+    // render on load
+    init();
+
+  </script>
+</body>
+</html>
