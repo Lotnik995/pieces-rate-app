@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Piece Rate — Weekly (one-day view)</title>
@@ -29,6 +32,13 @@
     @media (max-width:640px){ .row{flex-direction:column;align-items:stretch} .controls{flex-direction:column} }
   </style>
 </head>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(() => console.log('Service Worker registered'))
+      .catch(err => console.warn('SW register failed', err));
+  }
+</script>
 <body>
   <div class="wrap">
     <div class="card">
