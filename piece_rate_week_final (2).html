@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Piece Rate App – Weekly</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <div id="root" class="max-w-4xl mx-auto"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STORAGE_KEY = 'piece_rate_week_v1';
+
+    const defaultTrayTypes = [
+      { id: 'x8-bagged', label: 'x8 Bagged', pricePerTray: 1.20 },
+      { id: 'x8-naked', label: 'x8 Naked', pricePerTray: 1.00 },
+      { id: 'x6-naked', label: 'x6 Naked', pricePerTray: 0.90 },
+      { id: 'x11-naked', label: 'x11 Naked', pricePerTray: 0.80 },
+      { id: 'x8-1st', label: 'x8 1st Class', pricePerTray: 1.40 },
+      { id: 'x6-1st', label: 'x6 1st Class', pricePerTray: 1.30 },
+      { id: 'x8-2nd', label: 'x8 2nd Class', pricePerTray: 0.70 },
+      { id: 'x6-2nd', label: 'x6 2nd Class', pricePerTray: 0.60 }
+    ];
+
+    function App() {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+
+      const [trayTypes, setTrayTypes] = useState(stored.trayTypes || defaultTrayTypes);
+      const [week, setWeek] = useState(stored.week || Array(7).fill([]));
+      const [teamSize, setTeamSize] = useState(stored.teamSize || 5);
+
+      useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ trayTypes, week, teamSize }));
+      }, [trayTypes, week, teamSize]);
+
+      function addCustomTray() {
+        const id = 'custom-' + Date.now();
+        setTrayTypes([...trayTypes, { id, label: 'Custom Tray', pricePerTray: 1.00 }]);
+      }
+
+      function updateTray(id, field, value) {
+        setTrayTypes(t => t.map(tr => tr.id === id ? { ...tr, [field]: value } : tr));
+      }
+
+      function updateDay(dayIndex, trayId, qty) {
+        const newWeek = [...week];
+        const day = [...newWeek[dayIndex]];
+        const existing = day.find(d => d.trayId === trayId);
+        if (existing) existing.qty = qty;
+        else day.push({ trayId, qty });
+        newWeek[dayIndex] = day;
+        setWeek(newWeek);
+      }
+
+      function calcDayTotal(dayIndex) {
+        return week[dayIndex].reduce((sum, item) => {
+          const tr = trayTypes.find(t => t.id === item.trayId);
+          return sum + (tr ? tr.pricePerTray * item.qty : 0);
+        }, 0);
+      }
+
+      const weeklyTotal = Array(7).fill(0).reduce((sum, _, i) => sum + calcDayTotal(i), 0);
+
+      return (
+        <div className="p-4 bg-white rounded shadow">
+          <h1 className="text-2xl font-bold mb-4">Piece Rate – Weekly App</h1>
+
+          <div className="mb-4">
+            <label className="text-sm font-semibold">Team size</label>
+            <input className="border p-2 rounded ml-2 w-20" type="number" min="1" value={teamSize} onChange={e => setTeamSize(+e.target.value)} />
+          </div>
+
+          <h2 className="text-xl font-bold mt-4 mb-2">Tray Types</h2>
+          {trayTypes.map(t => (
+            <div key={t.id} className="grid grid-cols-3 gap-2 p-2 border-b">
+              <input className="border p-1 rounded" value={t.label} onChange={e => updateTray(t.id, 'label', e.target.value)} />
+              <input className="border p-1 rounded" type="number" step="0.01" value={t.pricePerTray} onChange={e => updateTray(t.id, 'pricePerTray', +e.target.value)} />
+            </div>
+          ))}
+
+          <button className="mt-2 bg-green-600 text-white px-3 py-1 rounded" onClick={addCustomTray}>Add Custom Tray</button>
+
+          <h2 className="text-xl font-bold mt-6 mb-2">Weekly Entry</h2>
+
+          {Array(7).fill(0).map((_, dayIndex) => (
+            <div key={dayIndex} className="border rounded p-3 mb-4 bg-gray-50">
+              <h3 className="font-bold mb-2">Day {dayIndex + 1}</h3>
+
+              {trayTypes.map(tr => (
+                <div key={tr.id} className="grid grid-cols-3 gap-2 mb-1">
+                  <div>{tr.label}</div>
+                  <input
+                    type="number"
+                    min="0"
+                    className="border p-1 rounded"
+                    value={week[dayIndex].find(x => x.trayId === tr.id)?.qty || ''}
+                    onChange={e => updateDay(dayIndex, tr.id, +e.target.value)}
+                  />
+                  <div className="text-right">£{(tr.pricePerTray * (week[dayIndex].find(x => x.trayId === tr.id)?.qty || 0)).toFixed(2)}</div>
+                </div>
+              ))}
+
+              <div className="font-semibold mt-2">Total: £{calcDayTotal(dayIndex).toFixed(2)}</div>
+            </div>
+          ))}
+
+          <div className="p-4 bg-blue-100 rounded text-lg font-bold">
+            Weekly Total: £{weeklyTotal.toFixed(2)} <br />
+            Per Person: £{(weeklyTotal / teamSize).toFixed(2)}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
