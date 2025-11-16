@@ -565,4 +565,515 @@ resetAllBtn.onclick = () => {
 ------------------------------ */
 
 activeDay = load("kl6_active_day", 0);
-renderAll();
+renderAll();// -----------------------------
+// STORAGE KEYS
+// -----------------------------
+const STORAGE_KEY = "KL6_FULL_DATA_v1";
+
+// -----------------------------
+// DEFAULT TRAY TYPES (PRICE PER TRAY)
+// -----------------------------
+let defaultTypes = [
+  { name: "x8 bagged", price: 0.00 },
+  { name: "x8 naked", price: 0.00 },
+  { name: "x6 naked", price: 0.00 },
+  { name: "x11 naked", price: 0.00 },
+  { name: "x8 1st class", price: 0.00 },
+  { name: "x6 1st class", price: 0.00 },
+  { name: "x7 1st class", price: 0.00 },
+  { name: "x8 2nd class", price: 0.00 },
+  { name: "x6 2nd class", price: 0.00 }
+];
+
+// -----------------------------
+// LOAD STORED DATA OR MAKE NEW
+// -----------------------------
+function loadData() {
+  let saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    return {
+      trayTypes: defaultTypes,
+      week: {
+        Monday:   { workers: 5, entries: [] },
+        Tuesday:  { workers: 5, entries: [] },
+        Wednesday:{ workers: 5, entries: [] },
+        Thursday: { workers: 5, entries: [] },
+        Friday:   { workers: 5, entries: [] },
+        Saturday: { workers: 5, entries: [] },
+        Sunday:   { workers: 5, entries: [] }
+      },
+      archive: {},
+    };
+  }
+  return JSON.parse(saved);
+}
+
+let state = loadData();
+
+// Save to localStorage
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// -----------------------------
+// ACTIVE DAY
+// -----------------------------
+let activeDay = "Monday";
+
+// -----------------------------
+// UI ELEMENTS
+// -----------------------------
+const weekTabs = document.getElementById("weekTabs");
+const presetType = document.getElementById("presetType");
+const pricePerTray = document.getElementById("pricePerTray");
+const traysQty = document.getElementById("traysQty");
+const entriesBody = document.getElementById("entriesBody");
+const teamInput = document.getElementById("teamInput");
+
+const dailyTotalEl = document.getElementById("dailyTotal");
+const dailyPerEl = document.getElementById("dailyPer");
+const weeklyTotalEl = document.getElementById("weeklyTotal");
+const weeklyPerEl = document.getElementById("weeklyPer");
+
+const activeDayLabel = document.getElementById("activeDayLabel");
+
+
+// -----------------------------
+// RENDER WEEK TABS (MON–SUN)
+// -----------------------------
+function renderWeekTabs() {
+  weekTabs.innerHTML = "";
+  const days = Object.keys(state.week);
+
+  days.forEach(day => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (activeDay === day ? " active" : "");
+    btn.textContent = day;
+    btn.onclick = () => {
+      activeDay = day;
+      renderActiveDay();
+      renderWeekTabs();
+    };
+    weekTabs.appendChild(btn);
+  });
+}
+
+// -----------------------------
+// RENDER PRESET TRAY TYPES
+// -----------------------------
+function renderPresetTypes() {
+  presetType.innerHTML = "";
+  state.trayTypes.forEach(t => {
+    let opt = document.createElement("option");
+    opt.value = t.name;
+    opt.textContent = t.name;
+    presetType.appendChild(opt);
+  });
+}
+
+// When selecting a tray type → preload its saved price
+presetType.onchange = () => {
+  let found = state.trayTypes.find(t => t.name === presetType.value);
+  if (found) pricePerTray.value = found.price;
+};
+
+// -----------------------------
+// RENDER DAY ENTRIES
+// -----------------------------
+function renderActiveDay() {
+  activeDayLabel.textContent = activeDay;
+  teamInput.value = state.week[activeDay].workers;
+
+  entriesBody.innerHTML = "";
+
+  state.week[activeDay].entries.forEach((e, index) => {
+    let row = document.createElement("div");
+    row.className = "entry";
+
+    row.innerHTML = `
+      <div class="type">${e.type}</div>
+      <div class="right">
+        <input type="text" value="${e.price}" data-i="${index}" data-f="price" style="width:100%" />
+      </div>
+      <div class="right">
+        <input type="number" value="${e.trays}" data-i="${index}" data-f="trays" style="width:100%" />
+      </div>
+      <div class="right small">£${(e.price * e.trays).toFixed(3)}</div>
+      <button class="del" data-del="${index}">X</button>
+    `;
+
+    entriesBody.appendChild(row);
+  });
+
+  calculateTotals();
+}// -----------------------------
+// ADD ENTRY
+// -----------------------------
+document.getElementById("addEntry").onclick = () => {
+  let type = presetType.value.trim();
+  let price = parseFloat(pricePerTray.value);
+  let trays = parseFloat(traysQty.value);
+
+  if (!type || isNaN(price) || isNaN(trays)) {
+    alert("Please fill type, price and trays.");
+    return;
+  }
+
+  // Save price to preset automatically
+  let found = state.trayTypes.find(t => t.name === type);
+  if (found) {
+    found.price = price;
+  }
+
+  state.week[activeDay].entries.push({
+    type,
+    price,
+    trays
+  });
+
+  traysQty.value = 0;
+
+  saveData();
+  renderPresetTypes();
+  renderActiveDay();
+};
+
+
+// -----------------------------
+// ADD NEW CUSTOM TRAY TYPE
+// -----------------------------
+document.getElementById("addType").onclick = () => {
+  let name = prompt("Enter new tray type name:");
+  if (!name) return;
+
+  // Avoid duplicates
+  if (state.trayTypes.some(t => t.name === name)) {
+    alert("Type already exists.");
+    return;
+  }
+
+  state.trayTypes.push({ name, price: 0 });
+  saveData();
+  renderPresetTypes();
+
+  presetType.value = name;
+};
+
+
+// -----------------------------
+// DELETE ENTRY
+// -----------------------------
+entriesBody.addEventListener("click", e => {
+  if (e.target.dataset.del !== undefined) {
+    let index = parseInt(e.target.dataset.del);
+    state.week[activeDay].entries.splice(index, 1);
+    saveData();
+    renderActiveDay();
+  }
+});
+
+
+// -----------------------------
+// EDIT ENTRY PRICE OR TRAYS
+// -----------------------------
+entriesBody.addEventListener("input", e => {
+  let i = e.target.dataset.i;
+  let field = e.target.dataset.f;
+
+  if (i === undefined || !field) return;
+
+  let value = e.target.value;
+
+  if (field === "price") {
+    state.week[activeDay].entries[i].price = parseFloat(value) || 0;
+  }
+  if (field === "trays") {
+    state.week[activeDay].entries[i].trays = parseFloat(value) || 0;
+  }
+
+  saveData();
+  renderActiveDay();
+});
+
+
+// -----------------------------
+// CHANGE WORKERS FOR ACTIVE DAY
+// -----------------------------
+teamInput.onchange = () => {
+  state.week[activeDay].workers = parseInt(teamInput.value) || 1;
+  saveData();
+  calculateTotals();
+};
+
+
+// -----------------------------
+// CALCULATE TOTALS
+// -----------------------------
+function calculateTotals() {
+  let entries = state.week[activeDay].entries;
+  let workers = state.week[activeDay].workers;
+
+  let daily = 0;
+  entries.forEach(e => {
+    daily += e.price * e.trays;
+  });
+
+  dailyTotalEl.textContent = "£" + daily.toFixed(2);
+  dailyPerEl.textContent = "Per person: £" + (daily / workers).toFixed(2);
+
+  // WEEKLY TOTAL
+  let weekly = 0;
+  Object.values(state.week).forEach(day => {
+    let sum = 0;
+    day.entries.forEach(e => sum += e.price * e.trays);
+    weekly += sum;
+  });
+
+  weeklyTotalEl.textContent = "£" + weekly.toFixed(2);
+
+  let totalWorkers = 0;
+  Object.values(state.week).forEach(day => {
+    totalWorkers += (day.entries.length > 0 ? day.workers : 0);
+  });
+
+  weeklyPerEl.textContent = "Weekly per-worker: £" + (weekly / 5).toFixed(2);
+}// -----------------------------
+// SAVE WEEK TO ARCHIVE
+// -----------------------------
+document.getElementById("saveWeekBtn").onclick = () => {
+  const weekName = prompt("Enter name for this week (e.g. Week 12):");
+  if (!weekName) return;
+
+  if (!state.archive) state.archive = {};
+
+  // Deep copy current week
+  state.archive[weekName] = JSON.parse(JSON.stringify(state.week));
+
+  saveData();
+  renderHistoryList();
+  populateMonthSelect();
+
+  alert("Week saved!");
+};
+
+
+// -----------------------------
+// RENDER SAVED WEEKS LIST
+// -----------------------------
+function renderHistoryList() {
+  const list = document.getElementById("historyList");
+  list.innerHTML = "";
+
+  if (!state.archive) return;
+
+  Object.keys(state.archive).forEach(week => {
+    let div = document.createElement("div");
+    div.textContent = week;
+    div.style.padding = "6px 4px";
+    div.style.cursor = "pointer";
+    div.style.borderBottom = "1px solid var(--border)";
+    div.onclick = () => {
+      document.getElementById("viewWeek").setAttribute("data-week", week);
+      document.getElementById("deleteWeek").setAttribute("data-week", week);
+      highlightSelectedWeek(week);
+    };
+    list.appendChild(div);
+  });
+}
+
+function highlightSelectedWeek(name) {
+  const list = document.getElementById("historyList").children;
+  for (let item of list) {
+    item.style.background = item.textContent === name ? "var(--glass)" : "transparent";
+  }
+}
+
+
+// -----------------------------
+// VIEW WEEK FROM ARCHIVE
+// -----------------------------
+document.getElementById("viewWeek").onclick = () => {
+  let name = document.getElementById("viewWeek").dataset.week;
+  if (!name) return alert("Select a week first.");
+
+  state.week = JSON.parse(JSON.stringify(state.archive[name]));
+  saveData();
+  renderWeekTabs();
+  renderActiveDay();
+  calculateTotals();
+
+  alert("Week loaded.");
+};
+
+
+// -----------------------------
+// DELETE SAVED WEEK
+// -----------------------------
+document.getElementById("deleteWeek").onclick = () => {
+  let name = document.getElementById("deleteWeek").dataset.week;
+  if (!name) return alert("Select a week first.");
+
+  if (!confirm("Delete " + name + "?")) return;
+
+  delete state.archive[name];
+  saveData();
+  renderHistoryList();
+  populateMonthSelect();
+
+  alert("Week deleted.");
+};
+
+
+// -----------------------------
+// MONTH SELECT POPULATION
+// -----------------------------
+function populateMonthSelect() {
+  const sel = document.getElementById("monthSelect");
+  sel.innerHTML = "";
+
+  if (!state.archive) return;
+
+  let months = new Set();
+
+  Object.keys(state.archive).forEach(name => {
+    // Auto-detect month keyword if included
+    let m = name.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
+    if (m) months.add(m[0].toLowerCase());
+  });
+
+  months.forEach(m => {
+    let opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+    sel.appendChild(opt);
+  });
+}
+
+
+// -----------------------------
+// MONTHLY SUMMARY CALCULATION
+// -----------------------------
+document.getElementById("monthSelect").onchange = () => {
+  const m = document.getElementById("monthSelect").value;
+  if (!m) return;
+
+  let total = 0;
+
+  Object.entries(state.archive).forEach(([name, week]) => {
+    if (!name.toLowerCase().includes(m)) return;
+
+    Object.values(week).forEach(day => {
+      day.entries.forEach(e => {
+        total += e.price * e.trays;
+      });
+    });
+  });
+
+  document.getElementById("monthlySummary").textContent =
+    "Total for " + m + ": £" + total.toFixed(2);
+};
+
+
+// -----------------------------
+// CSV EXPORT FOR MONTH
+// -----------------------------
+document.getElementById("exportMonth").onclick = () => {
+  const m = document.getElementById("monthSelect").value;
+  if (!m) return alert("Choose month first.");
+
+  let out = "Week,Day,Type,Price,Trays,Total\n";
+
+  Object.entries(state.archive).forEach(([name, week]) => {
+    if (!name.toLowerCase().includes(m)) return;
+
+    Object.entries(week).forEach(([day, data]) => {
+      data.entries.forEach(e => {
+        out += `${name},${day},${e.type},${e.price},${e.trays},${(e.price * e.trays).toFixed(2)}\n`;
+      });
+    });
+  });
+
+  let blob = new Blob([out], { type: "text/csv" });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = m + "_summary.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+};// -----------------------------
+// EXPORT CSV FOR CURRENT WEEK
+// -----------------------------
+document.getElementById("exportCsv").onclick = () => {
+  let out = "Day,Type,Price,Trays,Total\n";
+
+  Object.entries(state.week).forEach(([day, data]) => {
+    data.entries.forEach(e => {
+      out += `${day},${e.type},${e.price},${e.trays},${(e.price * e.trays).toFixed(2)}\n`;
+    });
+  });
+
+  let blob = new Blob([out], { type: "text/csv" });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "current_week.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+
+// -----------------------------
+// RESET ALL DATA
+// -----------------------------
+document.getElementById("resetAll").onclick = () => {
+  if (!confirm("Reset everything?")) return;
+
+  localStorage.removeItem(STORAGE_KEY);
+  state = loadData();
+
+  renderPresetTypes();
+  renderWeekTabs();
+  renderActiveDay();
+  renderHistoryList();
+  populateMonthSelect();
+
+  alert("Reset complete.");
+};
+
+
+// -----------------------------
+// EDIT ALL WEEK WORKERS
+// -----------------------------
+document.getElementById("editWeekWorkers").onclick = () => {
+  let n = prompt("Enter number of workers for the whole week:");
+  if (!n) return;
+
+  n = parseInt(n);
+  if (isNaN(n) || n < 1) return;
+
+  Object.keys(state.week).forEach(day => {
+    state.week[day].workers = n;
+  });
+
+  saveData();
+  renderActiveDay();
+  alert("Workers updated for all days.");
+};
+
+
+// -----------------------------
+// INITIAL PAGE LOAD
+// -----------------------------
+renderPresetTypes();
+renderWeekTabs();
+renderActiveDay();
+renderHistoryList();
+populateMonthSelect();
+
+console.log("KL-6 App Ready");
+
+</script>
+</body>
+</html>
