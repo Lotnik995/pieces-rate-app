@@ -1,32 +1,18 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>KL-6 — Piece Rate (Dark Clean)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>KL-6 — Piece Rate (Dark)</title>
   <meta name="theme-color" content="#0d0f15"/>
   <style>
     :root{
-      --bg:#0d0f15;
-      --card:#12141a;
-      --muted:#9aa0b2;
-      --text:#e6eef8;
-      --accent-1:#6b5cff;
-      --accent-2:#4f7dff;
-      --glass: rgba(255,255,255,0.02);
-      --border: rgba(255,255,255,0.04);
-      --radius:12px;
+      --bg:#0d0f15; --card:#12141a; --muted:#9aa0b2; --text:#e6eef8;
+      --accent-1:#6b5cff; --accent-2:#4f7dff; --glass:rgba(255,255,255,0.02);
+      --border:rgba(255,255,255,0.04); --radius:12px;
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:Inter,Segoe UI,Roboto,Arial, system-ui;
-      background:linear-gradient(180deg,#0b0c0f,#0d0f15);
-      color:var(--text);
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-      padding:14px;
-    }
+    body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,system-ui;background:linear-gradient(180deg,#0b0c0f,#0d0f15);color:var(--text);-webkit-font-smoothing:antialiased;padding:14px}
     .wrap{max-width:1100px;margin:12px auto;padding:12px}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
     .brand{display:flex;gap:12px;align-items:center}
@@ -38,7 +24,7 @@
     .btn.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border)}
     .card{background:linear-gradient(180deg,var(--card),#0f1116);border-radius:var(--radius);padding:14px;border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
     .layout{display:grid;grid-template-columns:1fr 360px;gap:16px}
-    @media (max-width:920px){ .layout{grid-template-columns:1fr} header{flex-direction:column;align-items:flex-start} .actions{width:100%;flex-wrap:wrap} }
+    @media (max-width:920px){.layout{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}.actions{width:100%;flex-wrap:wrap}}
     .tabs{display:flex;gap:8px;overflow:auto;padding:6px 0;margin-bottom:12px}
     .tab{padding:8px 10px;border-radius:999px;background:transparent;border:1px solid transparent;color:var(--muted);font-weight:700;cursor:pointer}
     .tab.active{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:white}
@@ -51,7 +37,7 @@
     .entry .small{color:var(--muted);font-size:13px}
     .entry .right{text-align:right}
     .entry .del{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px;border-radius:8px;cursor:pointer}
-    @media (max-width:700px){ .entry{grid-template-columns:1fr;gap:6px;padding:12px} .form-row{flex-direction:column} .form-row>*{width:100%} }
+    @media (max-width:700px){.entry{grid-template-columns:1fr;gap:6px;padding:12px}.form-row{flex-direction:column}.form-row>*{width:100%}}
     .totals .big{font-size:20px;font-weight:800}
     .history-list{max-height:260px;overflow:auto;padding:6px;border-radius:8px;background:var(--glass)}
     footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
@@ -94,12 +80,13 @@
 
           <div class="card" style="margin-bottom:12px">
             <div class="form-row" style="align-items:center">
-              <select id="presetType" style="min-width:220px"></select>
+              <select id="presetType" style="min-width:200px"></select>
               <input id="pricePerTray" type="text" placeholder="Price per tray (e.g. 0.557)" style="width:140px"/>
               <input id="traysQty" type="number" min="0" value="0" style="width:110px"/>
               <button id="addEntry" class="save-pill">Add</button>
             </div>
             <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="savePreset" class="btn ghost">Save preset</button>
               <button id="addType" class="btn ghost">+ New type</button>
               <button id="editWeekWorkers" class="btn ghost">Edit week workers</button>
             </div>
@@ -110,7 +97,7 @@
             <div class="entries" id="entriesBody"></div>
           </div>
 
-          <div class="small muted">Tip: choose a tray type to prefill price; prices save until you change them.</div>
+          <div class="small muted">Tip: choose a tray type to prefill price; change price and press "Save preset" to keep it.</div>
         </main>
 
         <aside>
@@ -147,40 +134,34 @@
   </div>
 
 <script>
-/* Clean single-version JS for Dark KL-6 app */
+/* KL-6 final clean (short names, prices per tray saved) */
 
-/* STORAGE KEYS */
-const STORAGE_KEY = 'kl6_clean_dark_v1';
+const STORAGE_KEY = 'kl6_short_v2';
 
-/* DEFAULT TRAY TYPES (per tray prices, strings to preserve precision input) */
+// short tray names, default prices = "0.00"
 const DEFAULT_TRAYS = [
-  {id:'x8-bagged', name:'x8 bagged', price:'0.560'},
-  {id:'x8-naked',  name:'x8 naked',  price:'0.480'},
-  {id:'x6-naked',  name:'x6 naked',  price:'0.430'},
-  {id:'x11-naked', name:'11 naked',  price:'0.510'},
-  {id:'x8-1st',    name:'8 1st class', price:'0.590'},
-  {id:'x6-1st',    name:'6 1st class', price:'0.510'},
-  {id:'x7-1st',    name:'7 1st class', price:'0.520'},
-  {id:'x8-2nd',    name:'8 2nd class', price:'0.350'},
-  {id:'x6-2nd',    name:'6 2nd class', price:'0.300'}
+  { id:'x8-bag', name:'x8 bag', price:'0.00' },
+  { id:'x8-nkd', name:'x8 nkd', price:'0.00' },
+  { id:'x6-nkd', name:'x6 nkd', price:'0.00' },
+  { id:'x11-nkd',name:'x11 nkd',price:'0.00' },
+  { id:'x8-1st', name:'x8 1st', price:'0.00' },
+  { id:'x6-1st', name:'x6 1st', price:'0.00' },
+  { id:'x7-1st', name:'x7 1st', price:'0.00' },
+  { id:'x8-2nd', name:'x8 2nd', price:'0.00' },
+  { id:'x6-2nd', name:'x6 2nd', price:'0.00' }
 ];
 
-/* DAYS */
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-/* STATE */
-let state = {
-  trays: [],
-  week: {},
-  archive: {}
-};
+let state = { trays: [], week: {}, archive: {} };
 let activeDay = 0;
 
-/* ELEMENTS */
+/* elements */
 const presetSelect = document.getElementById('presetType');
 const pricePerTray = document.getElementById('pricePerTray');
 const traysQty = document.getElementById('traysQty');
 const addEntryBtn = document.getElementById('addEntry');
+const savePresetBtn = document.getElementById('savePreset');
 const addTypeBtn = document.getElementById('addType');
 const editWeekWorkersBtn = document.getElementById('editWeekWorkers');
 const entriesBody = document.getElementById('entriesBody');
@@ -204,27 +185,20 @@ const viewWeekBtn = document.getElementById('viewWeek');
 const deleteWeekBtn = document.getElementById('deleteWeek');
 const exportMonthBtn = document.getElementById('exportMonth');
 
-/* UTIL */
+/* load / save */
 function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return null;
-    return JSON.parse(raw);
-  }catch(e){ return null; }
+  try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
 }
-function saveState(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
 function initState(){
-  const saved = loadState();
-  if(saved){
-    state = saved;
+  const s = loadState();
+  if(s){
+    state = s;
     // ensure structure
     if(!state.trays) state.trays = DEFAULT_TRAYS.slice();
-    if(!state.week){
-      state.week = {};
-      DAYS.forEach(d=> state.week[d] = {workers:5, entries:[]});
-    }
+    if(!state.week){ state.week = {}; DAYS.forEach(d=> state.week[d] = {workers:5, entries:[]}); }
     if(!state.archive) state.archive = {};
   } else {
     state.trays = DEFAULT_TRAYS.slice();
@@ -233,17 +207,16 @@ function initState(){
     state.archive = {};
     saveState();
   }
-  // ensure activeDay valid
   activeDay = Number(localStorage.getItem('kl6_active_day') || 0);
   if(activeDay<0||activeDay>6) activeDay = 0;
 }
 
-/* RENDER */
+/* render */
 function renderTabs(){
   weekTabs.innerHTML = '';
   DAYS.forEach((d,i)=>{
     const b = document.createElement('button');
-    b.className = 'tab' + (i===activeDay?' active':'');
+    b.className = 'tab' + (i===activeDay? ' active':'');
     b.textContent = d.slice(0,3);
     b.title = d;
     b.onclick = ()=>{ activeDay = i; localStorage.setItem('kl6_active_day', String(activeDay)); renderAll(); };
@@ -255,6 +228,274 @@ function renderTraySelect(){
   state.trays.forEach(t=>{
     const o = document.createElement('option'); o.value = t.id; o.text = t.name; presetSelect.appendChild(o);
   });
-  // set price field to selected tray price
-  const sel = state.trays.find(t=>t.id===presetSelect.value) || state.trays[0];
-  if(sel) pricePerTray.value = sel.price
+  const sel = state.trays.find(x=> x.id===presetSelect.value) || state.trays[0];
+  if(sel) pricePerTray.value = sel.price;
+}
+function renderEntries(){
+  entriesBody.innerHTML = '';
+  const day = state.week[DAYS[activeDay]];
+  day.entries.forEach((e,idx)=>{
+    const row = document.createElement('div'); row.className='entry';
+    row.innerHTML = `
+      <div class="type">${e.name}</div>
+      <div><input data-idx="${idx}" data-field="price" type="text" value="${e.price}" style="width:100%"/></div>
+      <div><input data-idx="${idx}" data-field="qty" type="number" min="0" value="${e.qty}" style="width:100%"/></div>
+      <div class="right small">£${(Number(e.price)*Number(e.qty)).toFixed(2)}</div>
+      <button class="del" data-del="${idx}">X</button>
+    `;
+    entriesBody.appendChild(row);
+  });
+}
+
+/* calculations */
+function calculateTotals(){
+  const day = state.week[DAYS[activeDay]];
+  const daily = day.entries.reduce((s,e)=> s + Number(e.price)*Number(e.qty), 0);
+  const workers = Number(day.workers || 1);
+  dailyTotalEl.textContent = '£' + daily.toFixed(2);
+  dailyPerEl.textContent = 'Per person: £' + (daily/workers).toFixed(2);
+
+  let weekly = 0;
+  DAYS.forEach(d=>{
+    weekly += state.week[d].entries.reduce((s,e)=> s + Number(e.price)*Number(e.qty),0);
+  });
+  weeklyTotalEl.textContent = '£' + weekly.toFixed(2);
+
+  let totalWorkers = 0, daysWith = 0;
+  DAYS.forEach(d=>{ if(state.week[d].entries.length){ totalWorkers += state.week[d].workers; daysWith++; }});
+  weeklyPerEl.textContent = 'Weekly per-worker: £' + (daysWith? (weekly/totalWorkers).toFixed(2) : (weekly/5).toFixed(2));
+}
+
+/* interactions */
+
+// when user picks tray, fill price input
+presetSelect.onchange = ()=> {
+  const t = state.trays.find(x=> x.id === presetSelect.value);
+  if(t) pricePerTray.value = t.price;
+};
+
+// save preset price without adding entry
+savePresetBtn.onclick = ()=> {
+  const id = presetSelect.value;
+  const t = state.trays.find(x=> x.id === id);
+  if(!t) return alert('No tray selected');
+  const p = pricePerTray.value.trim();
+  if(p === '' || isNaN(Number(p))) return alert('Enter a valid price (e.g. 0.557)');
+  t.price = p;
+  saveState();
+  renderTraySelect();
+  alert('Preset saved for ' + t.name);
+};
+
+// add entry (also stores price into preset)
+addEntryBtn.onclick = ()=>{
+  const id = presetSelect.value;
+  const t = state.trays.find(x=> x.id === id);
+  const price = pricePerTray.value.trim();
+  const qty = Number(traysQty.value || 0);
+  if(!t || price === '' || isNaN(Number(price)) || isNaN(qty)) return alert('Fill type, valid price and trays');
+  // add
+  state.week[DAYS[activeDay]].entries.push({ id, name: t.name, price: price, qty: qty });
+  // store price to preset so next time it's filled
+  t.price = price;
+  saveState();
+  traysQty.value = 0;
+  renderAll();
+};
+
+// add custom type
+addTypeBtn.onclick = ()=>{
+  const name = prompt('New tray type name (short):');
+  if(!name) return;
+  const id = name.toLowerCase().replace(/\s+/g,'-') + '-' + Date.now().toString(36);
+  const price = prompt('Default price (e.g. 0.500):','0.00');
+  state.trays.push({ id, name, price: (price||'0.00') });
+  saveState();
+  renderAll();
+};
+
+// entries editing + delete
+entriesBody.addEventListener('input', (ev)=>{
+  const el = ev.target;
+  const idx = el.getAttribute('data-idx');
+  const field = el.getAttribute('data-field');
+  if(idx==null || !field) return;
+  const day = state.week[DAYS[activeDay]];
+  if(field === 'price') day.entries[idx].price = el.value;
+  if(field === 'qty') day.entries[idx].qty = Number(el.value || 0);
+  // if price changed and it matches a preset id, update that preset too
+  const entry = day.entries[idx];
+  const preset = state.trays.find(t => t.name === entry.name || t.id === entry.id);
+  if(preset && field === 'price') { preset.price = entry.price; }
+  saveState();
+  renderEntries();
+  calculateTotals();
+});
+entriesBody.addEventListener('click', (ev)=>{
+  if(ev.target.dataset && ev.target.dataset.del !== undefined){
+    const idx = Number(ev.target.dataset.del);
+    state.week[DAYS[activeDay]].entries.splice(idx,1);
+    saveState();
+    renderAll();
+  }
+});
+
+// change workers
+teamInput.onchange = ()=>{
+  state.week[DAYS[activeDay]].workers = Number(teamInput.value || 1);
+  saveState();
+  calculateTotals();
+};
+
+// edit week workers in bulk
+editWeekWorkersBtn.onclick = ()=>{
+  const n = prompt('Set number of workers for whole week:');
+  if(!n) return;
+  const v = Number(n);
+  if(isNaN(v) || v < 1) return alert('Invalid number');
+  DAYS.forEach(d => state.week[d].workers = v);
+  saveState();
+  renderAll();
+};
+
+// save week to archive
+saveWeekBtn.onclick = ()=>{
+  const name = prompt('Save week name (e.g. Aug-4):');
+  if(!name) return;
+  state.archive[name] = JSON.parse(JSON.stringify(state.week));
+  saveState();
+  renderHistory();
+  populateMonths();
+  alert('Week saved: ' + name);
+};
+
+// history rendering and actions
+function renderHistory(){
+  historyList.innerHTML = '';
+  Object.keys(state.archive).sort().reverse().forEach(k=>{
+    const div = document.createElement('div');
+    div.textContent = k + ' — £' + computeArchiveWeekTotal(state.archive[k]).toFixed(2);
+    div.style.padding = '6px';
+    div.style.cursor = 'pointer';
+    div.onclick = ()=> {
+      Array.from(historyList.children).forEach(c=> c.style.background='transparent');
+      div.style.background = 'rgba(255,255,255,0.02)';
+      viewWeekBtn.dataset.week = k;
+      deleteWeekBtn.dataset.week = k;
+    };
+    historyList.appendChild(div);
+  });
+}
+function computeArchiveWeekTotal(wk){
+  let tot = 0;
+  Object.values(wk).forEach(day => day.entries.forEach(e => tot += Number(e.price)*Number(e.qty)));
+  return tot;
+}
+viewWeekBtn.onclick = ()=>{
+  const k = viewWeekBtn.dataset.week;
+  if(!k) return alert('Select a week from history first');
+  state.week = JSON.parse(JSON.stringify(state.archive[k]));
+  saveState();
+  renderAll();
+  alert('Loaded week ' + k);
+};
+deleteWeekBtn.onclick = ()=>{
+  const k = deleteWeekBtn.dataset.week;
+  if(!k) return alert('Select a week from history first');
+  if(!confirm('Delete ' + k + '?')) return;
+  delete state.archive[k];
+  saveState();
+  renderHistory();
+  populateMonths();
+  alert('Deleted ' + k);
+};
+
+// months
+function populateMonths(){
+  monthSelect.innerHTML = '';
+  const months = new Set();
+  Object.keys(state.archive).forEach(k=>{
+    const m = (k.match(/[A-Za-z]+/g)||[]).join(' ');
+    if(m) months.add(m);
+  });
+  Array.from(months).forEach(m=>{
+    const o = document.createElement('option'); o.value = m; o.textContent = m; monthSelect.appendChild(o);
+  });
+}
+monthSelect.onchange = ()=>{
+  const m = monthSelect.value; if(!m) return;
+  let tot = 0;
+  Object.entries(state.archive).forEach(([name,wk])=>{
+    if(name.includes(m)) tot += computeArchiveWeekTotal(wk);
+  });
+  monthlySummary.textContent = 'Total for ' + m + ': £' + tot.toFixed(2);
+};
+
+// export month
+exportMonthBtn.onclick = ()=>{
+  const m = monthSelect.value; if(!m) return alert('Choose month');
+  let out = 'Week,Day,Type,Price,Qty,Total\n';
+  Object.entries(state.archive).forEach(([name,wk])=>{
+    if(!name.includes(m)) return;
+    DAYS.forEach(d => wk[d].entries.forEach(e => {
+      out += `${name},${d},${e.name},${e.price},${e.qty},${(Number(e.price)*Number(e.qty)).toFixed(2)}\n`;
+    }));
+  });
+  const blob = new Blob([out], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = m + '_summary.csv'; a.click(); URL.revokeObjectURL(url);
+};
+
+// export current week
+exportCsvBtn.onclick = ()=>{
+  let out = 'Day,Type,Price,Qty,Total\n';
+  DAYS.forEach(d => state.week[d].entries.forEach(e => {
+    out += `${d},${e.name},${e.price},${e.qty},${(Number(e.price)*Number(e.qty)).toFixed(2)}\n`;
+  }));
+  const blob = new Blob([out], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'current_week.csv'; a.click(); URL.revokeObjectURL(url);
+};
+
+// reset all
+resetAllBtn.onclick = ()=>{
+  if(!confirm('Reset everything? This clears local data.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  initState();
+  renderAll();
+  renderHistory();
+  populateMonths();
+  alert('Reset done');
+};
+
+/* initialization */
+function renderAll(){
+  renderTabs();
+  renderTraySelect();
+  renderEntries();
+  activeDayLabel.textContent = DAYS[activeDay];
+  teamInput.value = state.week[DAYS[activeDay]].workers;
+  calculateTotals();
+  renderHistory();
+  populateMonths();
+}
+function init(){
+  const s = loadState();
+  if(!s){
+    state.trays = DEFAULT_TRAYS.slice();
+    state.week = {}; DAYS.forEach(d=> state.week[d] = {workers:5, entries:[]});
+    state.archive = {};
+    saveState();
+  } else {
+    state = s;
+    if(!state.trays) state.trays = DEFAULT_TRAYS.slice();
+    if(!state.week){ state.week = {}; DAYS.forEach(d=> state.week[d] = {workers:5, entries:[]}); }
+    if(!state.archive) state.archive = {};
+  }
+  activeDay = Number(localStorage.getItem('kl6_active_day') || 0);
+  if(activeDay<0||activeDay>6) activeDay = 0;
+  renderAll();
+}
+init();
+
+</script>
+</body>
+</html>
