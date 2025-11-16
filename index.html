@@ -20,7 +20,7 @@
     *{box-sizing:border-box}
     body{
       margin:0;
-      font-family:Inter,Segoe UI,Roboto,Arial;
+      font-family:Inter,Segoe UI,Roboto,Arial, sans-serif;
       background:linear-gradient(180deg,#0b0c0f,#0d0f15);
       color:var(--text);
       -webkit-font-smoothing:antialiased;
@@ -40,47 +40,49 @@
     .subtitle{color:var(--muted);font-size:13px}
     .top-actions{display:flex;gap:8px;align-items:center}
     .btn{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));border:0;color:white;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer;box-shadow:0 10px 30px rgba(79,61,255,0.08)}
-    .btn.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border)}    /* layout */
+    .btn.ghost{background:transparent;color:var(--accent-2);border:1px solid var(--border)}
+    /* card / layout */
     .card{background:linear-gradient(180deg,var(--card),#0f1116);border-radius:var(--radius);padding:14px;border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
     .layout{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    /* responsive */
     @media (max-width:900px){
       .layout{grid-template-columns:1fr}
       header{flex-direction:column;align-items:flex-start;gap:12px}
       .top-actions{flex-wrap:wrap}
+      .card{padding:12px;border-radius:12px}
     }
+    /* tabs */
     .tabs{display:flex;gap:8px;overflow:auto;padding:6px 0;margin-bottom:12px;-webkit-overflow-scrolling:touch}
-    .tab{min-width:48px;padding:8px 12px;border-radius:999px;background:transparent;border:1px solid transparent;color:var(--muted);font-weight:700;cursor:pointer;flex:0 0 auto}
+    .tab{min-width:44px;padding:8px 12px;border-radius:999px;background:transparent;border:1px solid transparent;color:var(--muted);font-weight:700;cursor:pointer}
     .tab.active{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:white;box-shadow:0 8px 24px rgba(79,61,255,0.12)}
-
+    /* form */
     .form-row{display:flex;gap:8px;align-items:center;margin-bottom:12px}
     .form-row .full{flex:1}
-    select,input[type="text"],input[type="number"]{
-      background:#0b0c0f;border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text);
-    }
-
+    select,input[type="text"],input[type="number"]{background:#0b0c0f;border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text);font-size:14px}
+    .save-pill{padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));color:#fff;border:none;cursor:pointer}
+    /* entries */
     .entries{display:flex;flex-direction:column;gap:10px}
-    .entry{
-      display:grid;grid-template-columns:1fr 110px 80px 90px 60px;
-      gap:8px;align-items:center;padding:10px;border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);
-      border:1px solid var(--border)
-    }
-    @media(max-width:700px){
+    .entry{display:grid;grid-template-columns:1fr 120px 80px 90px 60px;gap:8px;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border:1px solid var(--border)}
+    .entry .type{font-weight:700}
+    .entry .small{color:var(--muted);font-size:13px}
+    .entry .right{text-align:right}
+    .entry .del{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px;border-radius:8px}
+    @media (max-width:700px){
       .entry{grid-template-columns:1fr;gap:6px;padding:12px}
       .form-row{flex-direction:column;align-items:stretch}
+      .form-row > *{width:100%}
       .top-actions .btn{flex:1}
+      .top-actions{width:100%}
     }
-
+    /* totals & history */
     .totals .big{font-size:20px;font-weight:800}
-    .history-list{max-height:260px;overflow:auto;padding:6px;border-radius:8px;background:var(--glass)}
-
+    .history-list{max-height:260px;overflow:auto;padding:6px;border-radius:8px;background:rgba(255,255,255,0.02)}
     footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+    .small{font-size:13px;color:var(--muted)}
   </style>
 </head>
-
 <body>
   <div class="container">
-
     <header>
       <div class="brand">
         <div class="logo">KL-6</div>
@@ -89,6 +91,7 @@
           <div class="subtitle">Responsive • Full precision • Mobile-first</div>
         </div>
       </div>
+
       <div class="top-actions">
         <button id="exportCsv" class="btn">Export CSV</button>
         <button id="saveWeekBtn" class="btn">Save week</button>
@@ -97,93 +100,469 @@
     </header>
 
     <div class="card">
-      <div id="weekTabs" class="tabs"></div>
+      <div class="tabs" id="weekTabs"></div>
 
       <div class="layout">
-
-        <!-- MAIN -->
         <main>
-
-          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;flex-wrap:wrap">
             <div>
-              <div class="small muted">Active day</div>
+              <div class="small">Active day</div>
               <div id="activeDayLabel" style="font-size:18px;font-weight:800">Monday</div>
             </div>
             <div>
-              <div class="small muted">Workers today</div>
+              <div class="small">Workers today</div>
               <input id="teamInput" type="number" min="1" value="5" style="width:110px"/>
             </div>
           </div>
 
-          <!-- ADD ENTRY -->
           <div class="card" style="margin-bottom:12px">
             <div class="form-row" style="flex-direction:column">
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <select id="presetType" class="full"></select>
-                <input id="pricePerTray" type="text" placeholder="Price (e.g. 0.557)" style="width:140px"/>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <select id="presetType" class="full" style="min-width:220px"></select>
+                <input id="pricePerTray" type="text" placeholder="Price per tray (e.g. 0.557)" style="width:140px"/>
                 <input id="traysQty" type="number" min="0" value="0" style="width:110px"/>
-                <button id="addEntry" class="btn">Add</button>
+                <button id="addEntry" class="save-pill">Add</button>
               </div>
-              <div style="display:flex;gap:8px;margin-top:10px">
+              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
                 <button id="addType" class="btn ghost">+ New type</button>
                 <button id="editWeekWorkers" class="btn ghost">Edit week workers</button>
               </div>
             </div>
           </div>
 
-          <!-- ENTRIES -->
           <div class="card" style="margin-bottom:12px">
             <div style="font-weight:800;margin-bottom:8px">Entries</div>
-            <div id="entriesBody" class="entries"></div>
+            <div class="entries" id="entriesBody"></div>
           </div>
 
-          <div class="small muted">Tap a price or trays to edit instantly.</div>
-
+          <div class="small" style="color:var(--muted)">Tip: choose a tray type to prefill price; press Save under a row to make that price the default.</div>
         </main>
 
-        <!-- SIDE PANEL -->
         <aside>
-
-          <!-- DAILY/WEEK TOTALS -->
           <div class="card totals" style="margin-bottom:12px">
-            <div class="small muted">Daily total</div>
+            <div class="small">Daily total</div>
             <div id="dailyTotal" class="big">£0.00</div>
-            <div id="dailyPer" class="small muted">Per person: £0.00</div>
-            <hr style="border:0;border-top:1px solid var(--border);margin:12px 0"/>
-            <div class="small muted">Weekly total</div>
+            <div id="dailyPer" class="small">Per person: £0.00</div>
+            <hr style="border:none;border-top:1px solid var(--border);margin:12px 0"/>
+            <div class="small">Weekly total</div>
             <div id="weeklyTotal" class="big">£0.00</div>
-            <div id="weeklyPer" class="small muted">Weekly per-worker: £0.00</div>
+            <div id="weeklyPer" class="small">Weekly per-worker: £0.00</div>
           </div>
 
-          <!-- HISTORY -->
           <div class="card" style="margin-bottom:12px">
             <div style="font-weight:800;color:var(--accent-2);margin-bottom:6px">Week history</div>
-            <div id="historyList" class="history-list"></div>
-            <div style="display:flex;gap:8px;margin-top:10px">
+            <div class="history-list" id="historyList"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
               <button id="viewWeek" class="btn ghost" style="flex:1">View</button>
               <button id="deleteWeek" class="btn ghost" style="flex:1">Delete</button>
             </div>
           </div>
 
-          <!-- MONTH SUMMARY -->
           <div class="card">
             <div style="font-weight:800;color:var(--accent-2);margin-bottom:6px">Monthly totals</div>
-            <select id="monthSelect" style="width:100%"></select>
-            <div id="monthlySummary" style="margin-top:10px" class="small"></div>
+            <select id="monthSelect" class="month-select"></select>
+            <div id="monthlySummary" class="small" style="margin-top:10px"></div>
             <button id="exportMonth" class="btn ghost" style="margin-top:10px;width:100%">Export month</button>
           </div>
-
         </aside>
       </div>
     </div>
 
-    <footer>All data stored on your device • Weeks saved when you press “Save week”</footer>
+    <footer>Saved locally in your browser • Weeks archived when you press "Save week"</footer>
   </div>
+  <!-- script tag (JS part 1/2 will follow) -->
+  <script>/* ------------------------------
+   CONSTANTS + LOCAL STORAGE WRAPPERS
+------------------------------ */
 
-<script>
-/* SAME JAVASCRIPT AS BEFORE (LONG) */
-/* I can send this part separately if you want the full code again! */
-</script>
+const DAYS = [
+  "Monday","Tuesday","Wednesday",
+  "Thursday","Friday","Saturday","Sunday"
+];
 
-</body>
-</html>
+function load(key, def) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : def;
+  } catch {
+    return def;
+  }
+}
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+/* ------------------------------
+   DEFAULT TRAY TYPES
+------------------------------ */
+
+let trayTypes = load("kl6_tray_types", [
+  { id:"x8_bagged",  name:"x8 Bagged",  price:"0.560" },
+  { id:"x8_naked",   name:"x8 Naked",   price:"0.480" },
+  { id:"x6_naked",   name:"x6 Naked",   price:"0.430" },
+  { id:"x11_naked",  name:"x11 Naked",  price:"0.510" },
+  { id:"x8_1st",     name:"x8 1st class", price:"0.590" },
+  { id:"x6_1st",     name:"x6 1st class", price:"0.510" },
+  { id:"x7_1st",     name:"x7 1st class", price:"0.520" },
+  { id:"x8_2nd",     name:"x8 2nd class", price:"0.350" },
+  { id:"x6_2nd",     name:"x6 2nd class", price:"0.300" }
+]);
+
+/* ------------------------------
+   WEEK DATA (7 DAYS)
+------------------------------ */
+
+let weekData = load("kl6_week_data", {
+  days: DAYS.map(() => ({
+    workers: 5,
+    entries: []
+  }))
+});
+let activeDay = 0;
+
+/* ------------------------------
+   ELEMENT REFERENCES
+------------------------------ */
+
+const presetSelect = document.getElementById("presetType");
+const priceInput   = document.getElementById("pricePerTray");
+const qtyInput     = document.getElementById("traysQty");
+const addEntryBtn  = document.getElementById("addEntry");
+const addTypeBtn   = document.getElementById("addType");
+const editWeekWorkersBtn = document.getElementById("editWeekWorkers");
+const entriesBody  = document.getElementById("entriesBody");
+
+const weekTabs     = document.getElementById("weekTabs");
+const activeDayLabel = document.getElementById("activeDayLabel");
+const teamInput    = document.getElementById("teamInput");
+
+const dailyTotalEl = document.getElementById("dailyTotal");
+const dailyPerEl   = document.getElementById("dailyPer");
+const weeklyTotalEl = document.getElementById("weeklyTotal");
+const weeklyPerEl   = document.getElementById("weeklyPer");
+
+const monthSelect = document.getElementById("monthSelect");
+const monthlySummary = document.getElementById("monthlySummary");
+
+const exportCsvBtn = document.getElementById("exportCsv");
+const saveWeekBtn  = document.getElementById("saveWeekBtn");
+const resetAllBtn  = document.getElementById("resetAll");
+
+const viewWeekBtn = document.getElementById("viewWeek");
+const deleteWeekBtn = document.getElementById("deleteWeek");
+const historyList = document.getElementById("historyList");
+
+/* ------------------------------
+   UI BUILDING — TABS AND SELECT
+------------------------------ */
+
+function renderTabs() {
+  weekTabs.innerHTML = "";
+  DAYS.forEach((d, i) => {
+    const b = document.createElement("button");
+    b.className = "tab" + (i === activeDay ? " active" : "");
+    b.textContent = d.slice(0,3);
+    b.onclick = () => {
+      activeDay = i;
+      save("kl6_active_day", activeDay);
+      renderAll();
+    };
+    weekTabs.appendChild(b);
+  });
+}
+
+function renderTrayTypes() {
+  presetSelect.innerHTML = "";
+  trayTypes.forEach(t => {
+    const o = document.createElement("option");
+    o.value = t.id;
+    o.textContent = t.name;
+    presetSelect.appendChild(o);
+  });
+}
+
+/* ------------------------------
+   RENDER ENTRIES FOR ACTIVE DAY
+------------------------------ */
+
+function renderEntries() {
+  const day = weekData.days[activeDay];
+  entriesBody.innerHTML = "";
+
+  day.entries.forEach((e, idx) => {
+    const row = document.createElement("div");
+    row.className = "entry";
+
+    row.innerHTML = `
+      <div class="type">${e.name}</div>
+      <div class="small">£${Number(e.price).toFixed(3)}</div>
+      <div class="small">${e.qty} trays</div>
+      <div class="right">£${(Number(e.price)*Number(e.qty)).toFixed(2)}</div>
+      <button class="del">X</button>
+    `;
+
+    row.querySelector(".del").onclick = () => {
+      day.entries.splice(idx,1);
+      save("kl6_week_data", weekData);
+      renderAll();
+    };
+
+    entriesBody.appendChild(row);
+  });
+}
+
+/* ------------------------------
+   CALCULATE TOTALS
+------------------------------ */
+
+function calcTotals() {
+  let weekTotal = 0;
+  for (let i=0;i<7;i++){
+    let d = weekData.days[i];
+    let daySum = d.entries.reduce((s,e)=>s+ Number(e.price)*Number(e.qty),0);
+    weekTotal += daySum;
+  }
+  let d = weekData.days[activeDay];
+  let daily = d.entries.reduce((s,e)=>s + Number(e.price)*Number(e.qty),0);
+
+  let workers = Number(d.workers || 1);
+  dailyTotalEl.textContent = "£" + daily.toFixed(2);
+  dailyPerEl.textContent = "Per person: £" + (daily/workers).toFixed(2);
+
+  weeklyTotalEl.textContent = "£" + weekTotal.toFixed(2);
+  weeklyPerEl.textContent   = "Weekly per-worker: £" + (weekTotal/7/workers).toFixed(2);
+}
+
+/* ------------------------------
+   MAIN RENDER FUNCTION
+------------------------------ */
+
+function renderAll() {
+  renderTabs();
+  renderTrayTypes();
+  renderEntries();
+  activeDayLabel.textContent = DAYS[activeDay];
+  teamInput.value = weekData.days[activeDay].workers;
+  calcTotals();
+  renderHistory();
+  renderMonths();
+}/* ------------------------------
+   ADD ENTRY
+------------------------------ */
+
+addEntryBtn.onclick = () => {
+  const typeId = presetSelect.value;
+  const price = priceInput.value;
+  const qty = qtyInput.value;
+
+  if (!price || !qty) {
+    alert("Enter price and quantity");
+    return;
+  }
+
+  const type = trayTypes.find(t => t.id === typeId);
+  weekData.days[activeDay].entries.push({
+    id: typeId,
+    name: type.name,
+    price,
+    qty
+  });
+
+  save("kl6_week_data", weekData);
+  renderAll();
+};
+
+/* ------------------------------
+   ADD CUSTOM TRAY TYPE
+------------------------------ */
+
+addTypeBtn.onclick = () => {
+  const name = prompt("Name of new tray type:");
+  if (!name) return;
+
+  const price = prompt("Default price per tray:");
+  if (!price) return;
+
+  const id = "custom_" + Date.now();
+  trayTypes.push({ id, name, price });
+  save("kl6_tray_types", trayTypes);
+
+  renderTrayTypes();
+};
+
+/* ------------------------------
+   CHANGE WORKERS FOR ACTIVE DAY
+------------------------------ */
+
+teamInput.onchange = () => {
+  weekData.days[activeDay].workers = Number(teamInput.value || 1);
+  save("kl6_week_data", weekData);
+  renderAll();
+};
+
+/* ------------------------------
+   SAVE WEEK INTO HISTORY
+------------------------------ */
+
+saveWeekBtn.onclick = () => {
+  const weekTotal = weekData.days.reduce((sum, d) =>
+    sum + d.entries.reduce((s, e) => s + Number(e.price) * Number(e.qty), 0)
+  ,0);
+
+  const now = new Date();
+  const key = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}_${Date.now()}`;
+
+  let history = load("kl6_history", {});
+  history[key] = {
+    date: key,
+    total: weekTotal,
+    days: weekData.days
+  };
+  save("kl6_history", history);
+
+  alert("Week saved!");
+  renderHistory();
+};
+
+/* ------------------------------
+   RENDER WEEK HISTORY LIST
+------------------------------ */
+
+function renderHistory() {
+  const history = load("kl6_history", {});
+  historyList.innerHTML = "";
+
+  Object.keys(history).sort().reverse().forEach(k => {
+    const item = document.createElement("div");
+    item.className = "history-item";
+    item.textContent = `${k} — £${history[k].total.toFixed(2)}`;
+    item.onclick = () => {
+      viewHistoryWeek(k);
+    };
+    historyList.appendChild(item);
+  });
+}
+
+function viewHistoryWeek(key) {
+  const history = load("kl6_history", {});
+  if (!history[key]) return;
+
+  const w = history[key];
+  let msg = `Week ${key}\n\n`;
+
+  w.days.forEach((d, i) => {
+    const total = d.entries.reduce((s,e)=>s+Number(e.price)*Number(e.qty),0);
+    msg += `${DAYS[i]}: £${total.toFixed(2)}\n`;
+  });
+
+  alert(msg);
+}
+
+deleteWeekBtn.onclick = () => {
+  const history = load("kl6_history", {});
+  const keys = Object.keys(history);
+  if (!keys.length) return alert("No saved weeks.");
+
+  const toDelete = prompt("Enter week key to delete (copy from list):");
+  if (!toDelete) return;
+
+  if (!history[toDelete]) {
+    alert("Key not found.");
+    return;
+  }
+
+  delete history[toDelete];
+  save("kl6_history", history);
+  renderHistory();
+};
+
+/* ------------------------------
+   MONTH SUMMARY
+------------------------------ */
+
+function renderMonths() {
+  const history = load("kl6_history", {});
+  const months = {};
+
+  for (const key in history) {
+    const [y, m] = key.split("-").map(Number);
+    const monthKey = `${y}-${m}`;
+    months[monthKey] = (months[monthKey] || 0) + history[key].total;
+  }
+
+  monthSelect.innerHTML = "";
+  Object.keys(months).sort().forEach(m => {
+    const o = document.createElement("option");
+    o.value = m;
+    o.textContent = `${m} — £${months[m].toFixed(2)}`;
+    monthSelect.appendChild(o);
+  });
+
+  monthSelect.onchange = () => {
+    const val = monthSelect.value;
+    monthlySummary.textContent = val
+      ? `Monthly total: £${months[val].toFixed(2)}`
+      : "";
+  };
+}
+
+/* ------------------------------
+   EXPORT CSV
+------------------------------ */
+
+exportCsvBtn.onclick = () => {
+  let csv = "Day,Type,Price,Qty,Total\n";
+  weekData.days.forEach((d, i) => {
+    d.entries.forEach(e => {
+      const tot = Number(e.price)*Number(e.qty);
+      csv += `${DAYS[i]},${e.name},${e.price},${e.qty},${tot.toFixed(2)}\n`;
+    });
+  });
+
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "kl6_week.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+/* ------------------------------
+   RESET EVERYTHING
+------------------------------ */
+
+resetAllBtn.onclick = () => {
+  if (!confirm("Reset everything?")) return;
+
+  trayTypes = [
+    { id:"x8_bagged",  name:"x8 Bagged",  price:"0.560" },
+    { id:"x8_naked",   name:"x8 Naked",   price:"0.480" },
+    { id:"x6_naked",   name:"x6 Naked",   price:"0.430" },
+    { id:"x11_naked",  name:"x11 Naked",  price:"0.510" },
+    { id:"x8_1st",     name:"x8 1st class", price:"0.590" },
+    { id:"x6_1st",     name:"x6 1st class", price:"0.510" },
+    { id:"x7_1st",     name:"x7 1st class", price:"0.520" },
+    { id:"x8_2nd",     name:"x8 2nd class", price:"0.350" },
+    { id:"x6_2nd",     name:"x6 2nd class", price:"0.300" }
+  ];
+
+  weekData = {
+    days: DAYS.map(() => ({
+      workers: 5,
+      entries: []
+    }))
+  };
+
+  save("kl6_tray_types", trayTypes);
+  save("kl6_week_data", weekData);
+  save("kl6_history", {});
+  location.reload();
+};
+
+/* ------------------------------
+   INITIAL START
+------------------------------ */
+
+activeDay = load("kl6_active_day", 0);
+renderAll();
