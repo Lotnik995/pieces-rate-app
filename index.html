@@ -1,9 +1,12 @@
 <!doctype html>
 <html lang="en">
-<link rel="manifest" href="manifest.json" />
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0f15">
+<link rel="apple-touch-icon" href="icons/broccoli-512.png">
+
 <script>
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
+    navigator.serviceWorker.register("/service-worker.js");
   }
 </script>
   <head>
